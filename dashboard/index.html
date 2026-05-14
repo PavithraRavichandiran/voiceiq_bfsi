@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VoiceIQ-BFSI — Latency Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0f1117;
+      color: #e2e8f0;
+      min-height: 100vh;
+      padding: 2rem;
+    }
+
+    header {
+      display: flex;
+      align-items: baseline;
+      gap: 1rem;
+      margin-bottom: 2rem;
+      border-bottom: 1px solid #1e2330;
+      padding-bottom: 1rem;
+    }
+
+    header h1 { font-size: 1.4rem; font-weight: 700; color: #fff; }
+    header span { font-size: 0.85rem; color: #64748b; }
+
+    #status {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.8rem;
+      margin-left: auto;
+    }
+
+    #dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: #ef4444;
+      transition: background 0.3s;
+    }
+    #dot.live { background: #22c55e; animation: pulse 2s infinite; }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.4; }
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .card {
+      background: #161b27;
+      border: 1px solid #1e2330;
+      border-radius: 10px;
+      padding: 1.25rem 1.5rem;
+    }
+
+    .card h3 {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #64748b;
+      margin-bottom: 0.5rem;
+    }
+
+    .card .big {
+      font-size: 2.2rem;
+      font-weight: 700;
+      color: #fff;
+      line-height: 1;
+    }
+
+    .card .sub {
+      font-size: 0.8rem;
+      color: #64748b;
+      margin-top: 0.3rem;
+    }
+
+    .target-ok   { color: #22c55e; }
+    .target-warn { color: #f59e0b; }
+    .target-bad  { color: #ef4444; }
+
+    .chart-wrap {
+      background: #161b27;
+      border: 1px solid #1e2330;
+      border-radius: 10px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .chart-wrap h2 {
+      font-size: 0.9rem;
+      font-weight: 600;
+      margin-bottom: 1.25rem;
+      color: #cbd5e1;
+    }
+
+    canvas { width: 100% !important; }
+
+    .try-panel {
+      background: #161b27;
+      border: 1px solid #1e2330;
+      border-radius: 10px;
+      padding: 1.5rem;
+    }
+
+    .try-panel h2 { font-size: 0.9rem; font-weight: 600; color: #cbd5e1; margin-bottom: 1rem; }
+
+    textarea {
+      width: 100%;
+      height: 90px;
+      background: #0f1117;
+      border: 1px solid #2d3748;
+      border-radius: 6px;
+      color: #e2e8f0;
+      font-size: 0.85rem;
+      padding: 0.75rem;
+      resize: vertical;
+      font-family: inherit;
+    }
+    textarea:focus { outline: 2px solid #3b82f6; border-color: transparent; }
+
+    button {
+      margin-top: 0.75rem;
+      padding: 0.55rem 1.4rem;
+      background: #3b82f6;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    button:hover    { background: #2563eb; }
+    button:disabled { background: #374151; cursor: not-allowed; }
+
+    #result {
+      margin-top: 1rem;
+      background: #0f1117;
+      border: 1px solid #1e2330;
+      border-radius: 6px;
+      padding: 1rem;
+      font-size: 0.78rem;
+      font-family: 'Fira Code', 'Cascadia Code', monospace;
+      white-space: pre-wrap;
+      color: #86efac;
+      display: none;
+      max-height: 320px;
+      overflow-y: auto;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>VoiceIQ-BFSI</h1>
+  <span>Real-time pipeline latency</span>
+  <div id="status">
+    <div id="dot"></div>
+    <span id="status-text">connecting…</span>
+  </div>
+</header>
+
+<!-- KPI cards -->
+<div class="grid">
+  <div class="card">
+    <h3>P90 End-to-End</h3>
+    <div class="big" id="kpi-total">—</div>
+    <div class="sub">Target &lt; 900ms</div>
+  </div>
+  <div class="card">
+    <h3>P90 STT Correction</h3>
+    <div class="big" id="kpi-correction">—</div>
+    <div class="sub">Target &lt; 200ms</div>
+  </div>
+  <div class="card">
+    <h3>P90 Entity Extraction</h3>
+    <div class="big" id="kpi-extraction">—</div>
+    <div class="sub">Target &lt; 350ms</div>
+  </div>
+  <div class="card">
+    <h3>Requests measured</h3>
+    <div class="big" id="kpi-count">0</div>
+    <div class="sub">since server start</div>
+  </div>
+</div>
+
+<!-- Bar chart -->
+<div class="chart-wrap">
+  <h2>P50 / P90 / P99 Latency per Pipeline Stage (ms)</h2>
+  <canvas id="latencyChart" height="90"></canvas>
+</div>
+
+<!-- Live try panel -->
+<div class="try-panel">
+  <h2>Try it live</h2>
+  <textarea id="transcript" placeholder="Paste a Hinglish transcript here…
+e.g. main teen lakh ka personal lon lena chahta hoon barah mahne ke liye"></textarea>
+  <button id="runBtn" onclick="runExtraction()">Extract entities</button>
+  <pre id="result"></pre>
+</div>
+
+<script>
+  const STAGES = ['correction_ms', 'extraction_ms', 'total_ms'];
+  const LABELS = ['STT Correction', 'Entity Extraction', 'End-to-End'];
+  const TARGETS = { total_ms: 900, correction_ms: 200, extraction_ms: 350 };
+
+  const chart = new Chart(document.getElementById('latencyChart'), {
+    type: 'bar',
+    data: {
+      labels: LABELS,
+      datasets: [
+        { label: 'P50', data: [0, 0, 0], backgroundColor: '#3b82f6' },
+        { label: 'P90', data: [0, 0, 0], backgroundColor: '#8b5cf6' },
+        { label: 'P99', data: [0, 0, 0], backgroundColor: '#ec4899' },
+      ],
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { labels: { color: '#94a3b8' } } },
+      scales: {
+        x: { ticks: { color: '#94a3b8' }, grid: { color: '#1e2330' } },
+        y: {
+          ticks: { color: '#94a3b8', callback: v => v + 'ms' },
+          grid:  { color: '#1e2330' },
+          title: { display: true, text: 'Latency (ms)', color: '#64748b' },
+        },
+      },
+    },
+  });
+
+  function colorClass(ms, stage) {
+    if (!TARGETS[stage]) return '';
+    if (ms <= TARGETS[stage] * 0.8)  return 'target-ok';
+    if (ms <= TARGETS[stage])        return 'target-warn';
+    return 'target-bad';
+  }
+
+  function updateKPIs(stats) {
+    const map = {
+      'kpi-total':      ['total_ms',      900],
+      'kpi-correction': ['correction_ms', 200],
+      'kpi-extraction': ['extraction_ms', 350],
+    };
+    for (const [id, [stage]] of Object.entries(map)) {
+      const el = document.getElementById(id);
+      const p90 = stats[stage]?.p90 ?? null;
+      if (p90 === null) { el.textContent = '—'; continue; }
+      el.textContent = p90 + 'ms';
+      el.className = 'big ' + colorClass(p90, stage);
+    }
+    const count = stats['total_ms']?.count ?? 0;
+    document.getElementById('kpi-count').textContent = count;
+  }
+
+  function updateChart(stats) {
+    chart.data.datasets[0].data = STAGES.map(s => stats[s]?.p50 ?? 0);
+    chart.data.datasets[1].data = STAGES.map(s => stats[s]?.p90 ?? 0);
+    chart.data.datasets[2].data = STAGES.map(s => stats[s]?.p99 ?? 0);
+    chart.update('none');
+  }
+
+  function connectSSE() {
+    const es = new EventSource('/api/stats');
+
+    es.onopen = () => {
+      document.getElementById('dot').classList.add('live');
+      document.getElementById('status-text').textContent = 'live';
+    };
+
+    es.onmessage = (e) => {
+      const stats = JSON.parse(e.data);
+      if (!stats) return;
+      updateKPIs(stats);
+      updateChart(stats);
+    };
+
+    es.onerror = () => {
+      document.getElementById('dot').classList.remove('live');
+      document.getElementById('status-text').textContent = 'reconnecting…';
+      es.close();
+      setTimeout(connectSSE, 3000);
+    };
+  }
+
+  async function runExtraction() {
+    const transcript = document.getElementById('transcript').value.trim();
+    if (!transcript) return;
+
+    const btn    = document.getElementById('runBtn');
+    const result = document.getElementById('result');
+
+    btn.disabled    = true;
+    btn.textContent = 'Extracting…';
+    result.style.display = 'none';
+
+    try {
+      const res  = await fetch('/api/extract', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ transcript }),
+      });
+      const data = await res.json();
+      result.textContent    = JSON.stringify(data, null, 2);
+      result.style.display  = 'block';
+    } catch (err) {
+      result.textContent   = 'Error: ' + err.message;
+      result.style.display = 'block';
+    } finally {
+      btn.disabled    = false;
+      btn.textContent = 'Extract entities';
+    }
+  }
+
+  connectSSE();
+</script>
+</body>
+</html>
