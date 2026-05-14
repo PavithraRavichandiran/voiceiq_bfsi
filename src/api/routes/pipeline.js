@@ -1,0 +1,78 @@
+const { Router } = require('express');
+const { v4: uuidv4 } = require('uuid');
+const { correctTranscript } = require('../../pipeline/errorCorrector');
+const { extractEntities } = require('../../pipeline/entityExtractor');
+const { recordLatency } = require('../../utils/latencyTracker');
+const logger = require('../../utils/logger');
+
+const router = Router();
+
+// In-flight AbortControllers keyed by session_id — used by barge-in endpoint
+const activeControllers = new Map();
+
+router.post('/extract', async (req, res) => {
+  const { transcript, session_id } = req.body;
+
+  if (!transcript || typeof transcript !== 'string' || !transcript.trim()) {
+    return res.status(400).json({ error: 'transcript is required and must be a non-empty string' });
+  }
+
+  const sessionId = session_id || uuidv4();
+  const controller = new AbortController();
+  activeControllers.set(sessionId, controller);
+
+  const pipelineStart = Date.now();
+
+  try {
+    const { corrected, correction_ms, fallback } = await correctTranscript(
+      transcript.trim(),
+      controller.signal
+    );
+
+    const { entities, extraction_ms } = await extractEntities(corrected, controller.signal);
+
+    const total_ms = Date.now() - pipelineStart;
+
+    const latencyEntry = { correction_ms, extraction_ms, total_ms };
+    recordLatency(latencyEntry);
+
+    logger.info('pipeline complete', { session_id: sessionId, total_ms });
+
+    return res.json({
+      session_id:           sessionId,
+      corrected_transcript: corrected,
+      stt_fallback:         fallback || false,
+      entities,
+      latency: {
+        stt_ms:         0,
+        correction_ms,
+        extraction_ms,
+        total_ms,
+      },
+    });
+  } catch (err) {
+    if (err.name === 'AbortError') {
+      logger.info('pipeline aborted (barge-in)', { session_id: sessionId });
+      return res.status(409).json({ error: 'pipeline cancelled by barge-in', session_id: sessionId });
+    }
+
+    logger.error('pipeline error', { session_id: sessionId, error: err.message });
+    return res.status(500).json({ error: err.message });
+  } finally {
+    activeControllers.delete(sessionId);
+  }
+});
+
+router.post('/barge-in', (req, res) => {
+  const { session_id } = req.body;
+  if (!session_id) return res.status(400).json({ error: 'session_id is required' });
+
+  const controller = activeControllers.get(session_id);
+  if (!controller) return res.status(404).json({ error: 'no active pipeline for this session_id' });
+
+  controller.abort();
+  logger.info('barge-in triggered', { session_id });
+  return res.json({ cancelled: true, session_id });
+});
+
+module.exports = { router, activeControllers };
