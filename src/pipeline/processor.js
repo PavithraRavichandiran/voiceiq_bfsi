@@ -19,6 +19,8 @@ Fix phonetic STT errors while preserving meaning:
 - Hindi word errors: "paansh"→"paanch", "lak"→"lakh", "hazar"→"hazaar", "mahna"→"mahine"
 - Keep Hinglish structure intact — do NOT translate Hindi to English
 - Preserve all numbers and amounts exactly
+- Remove hallucinated/filler words that don't fit the financial context (e.g. "file", "yeah", "um", random nouns mid-sentence)
+- When a word and a digit express the same value back-to-back (e.g. "file 5 lakh", "paanch 5 lakh"), the speaker stuttered — keep only the digit or the correct word, not both
 
 ━━━ PART 2: ENTITY EXTRACTION ━━━
 Hindi number words: ek=1, do=2, teen=3, chaar=4, paanch=5, chhe=6, saat=7, aath=8, nau=9,
