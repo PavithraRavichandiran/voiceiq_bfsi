@@ -42,7 +42,7 @@ function percentile(arr, p) {
 function getStats() {
   if (!history.length) return null;
 
-  const stages = ['correction_ms', 'extraction_ms', 'total_ms'];
+  const stages = ['extraction_ms', 'total_ms'];
   const stats = {};
 
   for (const stage of stages) {

@@ -1,7 +1,6 @@
 const { Router } = require('express');
 const { v4: uuidv4 } = require('uuid');
-const { correctTranscript } = require('../../pipeline/errorCorrector');
-const { extractEntities } = require('../../pipeline/entityExtractor');
+const { processTranscript } = require('../../pipeline/processor');
 const { recordLatency } = require('../../utils/latencyTracker');
 const { saveSession } = require('../../pipeline/sessionStore');
 const logger = require('../../utils/logger');
@@ -25,23 +24,20 @@ router.post('/extract', async (req, res) => {
   const pipelineStart = Date.now();
 
   try {
-    const { corrected, correction_ms, fallback } = await correctTranscript(
+    const { corrected_transcript, entities, processing_ms } = await processTranscript(
       transcript.trim(),
       controller.signal
     );
 
-    const { entities, extraction_ms } = await extractEntities(corrected, controller.signal);
-
     const total_ms = Date.now() - pipelineStart;
 
-    const latencyEntry = { correction_ms, extraction_ms, total_ms };
+    const latencyEntry = { correction_ms: 0, extraction_ms: processing_ms, total_ms };
     recordLatency(latencyEntry);
 
     saveSession({
       session_id:           sessionId,
       raw_transcript:       transcript.trim(),
-      corrected_transcript: corrected,
-      stt_fallback:         fallback || false,
+      corrected_transcript,
       entities,
       latency:              latencyEntry,
     });
@@ -49,14 +45,12 @@ router.post('/extract', async (req, res) => {
     logger.info('pipeline complete', { session_id: sessionId, total_ms });
 
     return res.json({
-      session_id:           sessionId,
-      corrected_transcript: corrected,
-      stt_fallback:         fallback || false,
+      session_id,
+      corrected_transcript,
       entities,
       latency: {
-        stt_ms:         0,
-        correction_ms,
-        extraction_ms,
+        stt_ms:        0,
+        processing_ms,
         total_ms,
       },
     });
