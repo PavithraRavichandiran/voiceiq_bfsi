@@ -1,0 +1,402 @@
+[
+  {
+    "id": 1,
+    "scenario": "personal_loan_enquiry_hindi",
+    "noisy_transcript": "main ek parsonal lon lena chai hoon teen lak ka chaubees mahna ke liye",
+    "clean_transcript": "main ek personal loan lena chahta hoon teen lakh ka chaubees mahine ke liye",
+    "ground_truth": {
+      "loan_amount":    { "value": 300000, "currency": "INR" },
+      "loan_tenure":    { "value": 24, "unit": "months" },
+      "emi_amount":     null,
+      "product_type":   { "value": "personal_loan" },
+      "pan_number":     null,
+      "monthly_income": null,
+      "interest_rate":  null,
+      "call_intent":    { "value": "loan_enquiry" }
+    }
+  },
+  {
+    "id": 2,
+    "scenario": "personal_loan_with_income_and_emi",
+    "noisy_transcript": "mujhe paansh lak ka parsonal lone chahiye meri salry forty five thousan hai aur EMI paansh haazar se jyada nahi honi chahiye",
+    "clean_transcript": "mujhe paanch lakh ka personal loan chahiye meri salary forty five thousand hai aur EMI paanch hazaar se jyada nahi honi chahiye",
+    "ground_truth": {
+      "loan_amount":    { "value": 500000, "currency": "INR" },
+      "loan_tenure":    null,
+      "emi_amount":     { "value": 5000, "currency": "INR" },
+      "product_type":   { "value": "personal_loan" },
+      "pan_number":     null,
+      "monthly_income": { "value": 45000, "currency": "INR" },
+      "interest_rate":  null,
+      "call_intent":    { "value": "loan_enquiry" }
+    }
+  },
+  {
+    "id": 3,
+    "scenario": "personal_loan_with_pan_verification",
+    "noisy_transcript": "lone ke liye apply karna hai mera PAN PQRST5678U hai aur main government employee hoon salary sixty thousand hai",
+    "clean_transcript": "loan ke liye apply karna hai mera PAN PQRST5678U hai aur main government employee hoon salary sixty thousand hai",
+    "ground_truth": {
+      "loan_amount":    null,
+      "loan_tenure":    null,
+      "emi_amount":     null,
+      "product_type":   { "value": "personal_loan" },
+      "pan_number":     { "value": "PQRST5678U" },
+      "monthly_income": { "value": 60000, "currency": "INR" },
+      "interest_rate":  null,
+      "call_intent":    { "value": "loan_enquiry" }
+    }
+  },
+  {
+    "id": 4,
+    "scenario": "home_loan_amount_and_tenure",
+    "noisy_transcript": "mujhe ghar kharidna hai home lone fifty lak ka chahiye bees saal ke liye",
+    "clean_transcript": "mujhe ghar kharidna hai home loan fifty lakh ka chahiye bees saal ke liye",
+    "ground_truth": {
+      "loan_amount":    { "value": 5000000, "currency": "INR" },
+      "loan_tenure":    { "value": 20, "unit": "years" },
+      "emi_amount":     null,
+      "product_type":   { "value": "home_loan" },
+      "pan_number":     null,
+      "monthly_income": null,
+      "interest_rate":  null,
+      "call_intent":    { "value": "loan_enquiry" }
+    }
+  },
+  {
+    "id": 5,
+    "scenario": "home_loan_with_income_and_rate",
+    "noisy_transcript": "home lon apply karna hai seventy lak ka meri monthly salry ninety thousand hai intrest rate kitna milega",
+    "clean_transcript": "home loan apply karna hai seventy lakh ka meri monthly salary ninety thousand hai interest rate kitna milega",
+    "ground_truth": {
+      "loan_amount":    { "value": 7000000, "currency": "INR" },
+      "loan_tenure":    null,
+      "emi_amount":     null,
+      "product_type":   { "value": "home_loan" },
+      "pan_number":     null,
+      "monthly_income": { "value": 90000, "currency": "INR" },
+      "interest_rate":  null,
+      "call_intent":    { "value": "loan_enquiry" }
+    }
+  },
+  {
+    "id": 6,
+    "scenario": "home_loan_mixed_hinglish",
+    "noisy_transcript": "I want to take a home loan of around forty lakh for fifteen years what is the current interest rate",
+    "clean_transcript": "I want to take a home loan of around forty lakh for fifteen years what is the current interest rate",
+    "ground_truth": {
+      "loan_amount":    { "value": 4000000, "currency": "INR" },
+      "loan_tenure":    { "value": 15, "unit": "years" },
+      "emi_amount":     null,
+      "product_type":   { "value": "home_loan" },
+      "pan_number":     null,
+      "monthly_income": null,
+      "interest_rate":  null,
+      "call_intent":    { "value": "loan_enquiry" }
+    }
+  },
+  {
+    "id": 7,
+    "scenario": "car_loan_enquiry",
+    "noisy_transcript": "car lon chahiye do lak ka teen saal ke liye intrest rate kya hai",
+    "clean_transcript": "car loan chahiye do lakh ka teen saal ke liye interest rate kya hai",
+    "ground_truth": {
+      "loan_amount":    { "value": 200000, "currency": "INR" },
+      "loan_tenure":    { "value": 3, "unit": "years" },
+      "emi_amount":     null,
+      "product_type":   { "value": "car_loan" },
+      "pan_number":     null,
+      "monthly_income": null,
+      "interest_rate":  null,
+      "call_intent":    { "value": "loan_enquiry" }
+    }
+  },
+  {
+    "id": 8,
+    "scenario": "car_loan_with_interest_rate",
+    "noisy_transcript": "mujhe second hand car ke liye lon chahiye ek lak pachaas haazar ka aur intrest aath percent se kam hona chahiye",
+    "clean_transcript": "mujhe second hand car ke liye loan chahiye ek lakh pachaas hazaar ka aur interest aath percent se kam hona chahiye",
+    "ground_truth": {
+      "loan_amount":    { "value": 150000, "currency": "INR" },
+      "loan_tenure":    null,
+      "emi_amount":     null,
+      "product_type":   { "value": "car_loan" },
+      "pan_number":     null,
+      "monthly_income": null,
+      "interest_rate":  { "value": 8, "unit": "percent" },
+      "call_intent":    { "value": "loan_enquiry" }
+    }
+  },
+  {
+    "id": 9,
+    "scenario": "credit_card_wrong_charges_complaint",
+    "noisy_transcript": "meri kradit card pe wrong charjes aa gaye hain paansh haazar ki transaction maine nahi ki please investigate karo",
+    "clean_transcript": "meri credit card pe wrong charges aa gaye hain paanch hazaar ki transaction maine nahi ki please investigate karo",
+    "ground_truth": {
+      "loan_amount":    null,
+      "loan_tenure":    null,
+      "emi_amount":     null,
+      "product_type":   { "value": "credit_card" },
+      "pan_number":     null,
+      "monthly_income": null,
+      "interest_rate":  null,
+      "call_intent":    { "value": "complaint" }
+    }
+  },
+  {
+    "id": 10,
+    "scenario": "credit_card_interest_rate_query",
+    "noisy_transcript": "meri kradit card ka intrest rate bahut jyada hai thirty six percent aa raha hai ye kaise kam hoga",
+    "clean_transcript": "meri credit card ka interest rate bahut jyada hai thirty six percent aa raha hai ye kaise kam hoga",
+    "ground_truth": {
+      "loan_amount":    null,
+      "loan_tenure":    null,
+      "emi_amount":     null,
+      "product_type":   { "value": "credit_card" },
+      "pan_number":     null,
+      "monthly_income": null,
+      "interest_rate":  { "value": 36, "unit": "percent" },
+      "call_intent":    { "value": "complaint" }
+    }
+  },
+  {
+    "id": 11,
+    "scenario": "emi_rescheduling_request",
+    "noisy_transcript": "meri emi paansh haazar hai main ise extend karna chahta hoon chhe mahna aur de do financially problem hai",
+    "clean_transcript": "meri EMI paanch hazaar hai main ise extend karna chahta hoon chhe mahine aur de do financially problem hai",
+    "ground_truth": {
+      "loan_amount":    null,
+      "loan_tenure":    null,
+      "emi_amount":     { "value": 5000, "currency": "INR" },
+      "product_type":   null,
+      "pan_number":     null,
+      "monthly_income": null,
+      "interest_rate":  null,
+      "call_intent":    { "value": "emi_payment" }
+    }
+  },
+  {
+    "id": 12,
+    "scenario": "emi_bounce_collections",
+    "noisy_transcript": "aapka do mahna se EMI bounce ho raha hai teen haazar saath sau ka payment pending hai please pay karo",
+    "clean_transcript": "aapka do mahine se EMI bounce ho raha hai teen hazaar saath sau ka payment pending hai please pay karo",
+    "ground_truth": {
+      "loan_amount":    null,
+      "loan_tenure":    null,
+      "emi_amount":     { "value": 3600, "currency": "INR" },
+      "product_type":   null,
+      "pan_number":     null,
+      "monthly_income": null,
+      "interest_rate":  null,
+      "call_intent":    { "value": "collections" }
+    }
+  },
+  {
+    "id": 13,
+    "scenario": "collections_overdue_personal_loan",
+    "noisy_transcript": "aapke parsonal lone ki teen installment pending hain total do lak rupe overdue hai legal action liya jayega",
+    "clean_transcript": "aapke personal loan ki teen installment pending hain total do lakh rupee overdue hai legal action liya jayega",
+    "ground_truth": {
+      "loan_amount":    { "value": 200000, "currency": "INR" },
+      "loan_tenure":    null,
+      "emi_amount":     null,
+      "product_type":   { "value": "personal_loan" },
+      "pan_number":     null,
+      "monthly_income": null,
+      "interest_rate":  null,
+      "call_intent":    { "value": "collections" }
+    }
+  },
+  {
+    "id": 14,
+    "scenario": "pan_kyc_data_validation",
+    "noisy_transcript": "KYC update ke liye call kar raha hoon mera PAN ABCDE1234F hai aur Aadhaar link karna hai",
+    "clean_transcript": "KYC update ke liye call kar raha hoon mera PAN ABCDE1234F hai aur Aadhaar link karna hai",
+    "ground_truth": {
+      "loan_amount":    null,
+      "loan_tenure":    null,
+      "emi_amount":     null,
+      "product_type":   null,
+      "pan_number":     { "value": "ABCDE1234F" },
+      "monthly_income": null,
+      "interest_rate":  null,
+      "call_intent":    { "value": "data_validation" }
+    }
+  },
+  {
+    "id": 15,
+    "scenario": "loan_status_check",
+    "noisy_transcript": "maine teen hafte pehle parsonal lon apply kiya tha paansh lak ka abhi tak approval nahi aaya kya status hai",
+    "clean_transcript": "maine teen hafte pehle personal loan apply kiya tha paanch lakh ka abhi tak approval nahi aaya kya status hai",
+    "ground_truth": {
+      "loan_amount":    { "value": 500000, "currency": "INR" },
+      "loan_tenure":    null,
+      "emi_amount":     null,
+      "product_type":   { "value": "personal_loan" },
+      "pan_number":     null,
+      "monthly_income": null,
+      "interest_rate":  null,
+      "call_intent":    { "value": "general_enquiry" }
+    }
+  },
+  {
+    "id": 16,
+    "scenario": "balance_transfer_enquiry",
+    "noisy_transcript": "mera existing lon do lak ka hai intrest rate fourteen percent chal raha hai kya aap balance transfer kar sakte ho better rate pe",
+    "clean_transcript": "mera existing loan do lakh ka hai interest rate fourteen percent chal raha hai kya aap balance transfer kar sakte ho better rate pe",
+    "ground_truth": {
+      "loan_amount":    { "value": 200000, "currency": "INR" },
+      "loan_tenure":    null,
+      "emi_amount":     null,
+      "product_type":   null,
+      "pan_number":     null,
+      "monthly_income": null,
+      "interest_rate":  { "value": 14, "unit": "percent" },
+      "call_intent":    { "value": "loan_enquiry" }
+    }
+  },
+  {
+    "id": 17,
+    "scenario": "loan_rejection_followup",
+    "noisy_transcript": "mera parsonal lon reject ho gaya CIBIL score low tha kya main dobara apply kar sakta hoon kuch mahne baad",
+    "clean_transcript": "mera personal loan reject ho gaya CIBIL score low tha kya main dobara apply kar sakta hoon kuch mahine baad",
+    "ground_truth": {
+      "loan_amount":    null,
+      "loan_tenure":    null,
+      "emi_amount":     null,
+      "product_type":   { "value": "personal_loan" },
+      "pan_number":     null,
+      "monthly_income": null,
+      "interest_rate":  null,
+      "call_intent":    { "value": "general_enquiry" }
+    }
+  },
+  {
+    "id": 18,
+    "scenario": "fd_opening_enquiry",
+    "noisy_transcript": "main ek FD open karna chahta hoon do lak ka ek saal ke liye interest rate kya milega",
+    "clean_transcript": "main ek FD open karna chahta hoon do lakh ka ek saal ke liye interest rate kya milega",
+    "ground_truth": {
+      "loan_amount":    { "value": 200000, "currency": "INR" },
+      "loan_tenure":    { "value": 1, "unit": "years" },
+      "emi_amount":     null,
+      "product_type":   { "value": "fd" },
+      "pan_number":     null,
+      "monthly_income": null,
+      "interest_rate":  null,
+      "call_intent":    { "value": "loan_enquiry" }
+    }
+  },
+  {
+    "id": 19,
+    "scenario": "mutual_fund_sip_enquiry",
+    "noisy_transcript": "mutual fund SIP shuru karna hai paansh haazar per month se kya return milega long term mein",
+    "clean_transcript": "mutual fund SIP shuru karna hai paanch hazaar per month se kya return milega long term mein",
+    "ground_truth": {
+      "loan_amount":    null,
+      "loan_tenure":    null,
+      "emi_amount":     { "value": 5000, "currency": "INR" },
+      "product_type":   { "value": "mutual_fund" },
+      "pan_number":     null,
+      "monthly_income": null,
+      "interest_rate":  null,
+      "call_intent":    { "value": "general_enquiry" }
+    }
+  },
+  {
+    "id": 20,
+    "scenario": "insurance_term_plan_enquiry",
+    "noisy_transcript": "mujhe term insurans chahiye ek crore ka cover twenty five saal ke liye premium kitna hoga main thirty two saal ka hoon",
+    "clean_transcript": "mujhe term insurance chahiye ek crore ka cover twenty five saal ke liye premium kitna hoga main thirty two saal ka hoon",
+    "ground_truth": {
+      "loan_amount":    null,
+      "loan_tenure":    { "value": 25, "unit": "years" },
+      "emi_amount":     null,
+      "product_type":   { "value": "insurance" },
+      "pan_number":     null,
+      "monthly_income": null,
+      "interest_rate":  null,
+      "call_intent":    { "value": "general_enquiry" }
+    }
+  },
+  {
+    "id": 21,
+    "scenario": "personal_loan_salaried_with_emi_calc",
+    "noisy_transcript": "main salaried hoon salary sixty haazar hai parsonal lone chaiye saat lak ka barah mahne ke liye EMI kitni hogi aur byaaj kya hai",
+    "clean_transcript": "main salaried hoon salary sixty hazaar hai personal loan chahiye saat lakh ka barah mahine ke liye EMI kitni hogi aur byaaj kya hai",
+    "ground_truth": {
+      "loan_amount":    { "value": 700000, "currency": "INR" },
+      "loan_tenure":    { "value": 12, "unit": "months" },
+      "emi_amount":     null,
+      "product_type":   { "value": "personal_loan" },
+      "pan_number":     null,
+      "monthly_income": { "value": 60000, "currency": "INR" },
+      "interest_rate":  null,
+      "call_intent":    { "value": "loan_enquiry" }
+    }
+  },
+  {
+    "id": 22,
+    "scenario": "home_loan_approval_status_with_pan",
+    "noisy_transcript": "mera home lon application status check karna hai PAN LMNOP6789Q hai teen mahne ho gaye approval nahi aaya sixty lak ka loan tha",
+    "clean_transcript": "mera home loan application status check karna hai PAN LMNOP6789Q hai teen mahine ho gaye approval nahi aaya sixty lakh ka loan tha",
+    "ground_truth": {
+      "loan_amount":    { "value": 6000000, "currency": "INR" },
+      "loan_tenure":    null,
+      "emi_amount":     null,
+      "product_type":   { "value": "home_loan" },
+      "pan_number":     { "value": "LMNOP6789Q" },
+      "monthly_income": null,
+      "interest_rate":  null,
+      "call_intent":    { "value": "general_enquiry" }
+    }
+  },
+  {
+    "id": 23,
+    "scenario": "credit_card_limit_increase",
+    "noisy_transcript": "meri kradit card ki limit badhani hai abhi do lak hai use chaar lak karna chahta hoon income bhi badh gayi hai monthly salary ninety haazar hai",
+    "clean_transcript": "meri credit card ki limit badhani hai abhi do lakh hai use chaar lakh karna chahta hoon income bhi badh gayi hai monthly salary ninety hazaar hai",
+    "ground_truth": {
+      "loan_amount":    null,
+      "loan_tenure":    null,
+      "emi_amount":     null,
+      "product_type":   { "value": "credit_card" },
+      "pan_number":     null,
+      "monthly_income": { "value": 90000, "currency": "INR" },
+      "interest_rate":  null,
+      "call_intent":    { "value": "general_enquiry" }
+    }
+  },
+  {
+    "id": 24,
+    "scenario": "interest_rate_negotiation",
+    "noisy_transcript": "mera home lon ten point five percent pe chal raha hai market mein eight percent mile raha hai kya aap rate kam kar sakte ho nahi to bank switch karunga",
+    "clean_transcript": "mera home loan ten point five percent pe chal raha hai market mein eight percent mil raha hai kya aap rate kam kar sakte ho nahi to bank switch karunga",
+    "ground_truth": {
+      "loan_amount":    null,
+      "loan_tenure":    null,
+      "emi_amount":     null,
+      "product_type":   { "value": "home_loan" },
+      "pan_number":     null,
+      "monthly_income": null,
+      "interest_rate":  { "value": 10.5, "unit": "percent" },
+      "call_intent":    { "value": "complaint" }
+    }
+  },
+  {
+    "id": 25,
+    "scenario": "multi_entity_complex_call",
+    "noisy_transcript": "namaste mujhe parsonal lon chahiye teen lak ka chaubees mahne ke liye meri salary fifty haazar hai EMI baar haazar se jyada nahi chahiye mera PAN WXYZ12345A hai aur interest bhi twelve percent se kam hona chahiye",
+    "clean_transcript": "namaste mujhe personal loan chahiye teen lakh ka chaubees mahine ke liye meri salary fifty hazaar hai EMI barah hazaar se jyada nahi chahiye mera PAN WXYZ12345A hai aur interest bhi twelve percent se kam hona chahiye",
+    "ground_truth": {
+      "loan_amount":    { "value": 300000, "currency": "INR" },
+      "loan_tenure":    { "value": 24, "unit": "months" },
+      "emi_amount":     { "value": 12000, "currency": "INR" },
+      "product_type":   { "value": "personal_loan" },
+      "pan_number":     { "value": "WXYZ12345A" },
+      "monthly_income": { "value": 50000, "currency": "INR" },
+      "interest_rate":  { "value": 12, "unit": "percent" },
+      "call_intent":    { "value": "loan_enquiry" }
+    }
+  }
+]
