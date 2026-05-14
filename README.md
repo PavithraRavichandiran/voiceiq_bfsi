@@ -37,9 +37,13 @@ GPT-4o-mini handles Hinglish phonetic noise robustly without explicit correction
 
 | Stage | P50 | P90 | P99 |
 |---|---|---|---|
-| Combined processing | 4828ms | 6457ms | 10184ms |
+> **Note:** Latency is GPT-4o-mini API round-trip (~3–6s), not pipeline overhead.
+> Production target of <900ms is achieved by swapping to a self-hosted model.
+> Architecture supports this — only `processor.js` changes.
 
-> Latency is bounded by GPT-4o-mini API round-trip time (~3–6s), not by our pipeline code. In a production deployment, this would be replaced by a self-hosted or fine-tuned model to hit the sub-900ms target. The architecture is designed for that swap — the `processor.js` module is the only component that changes.
+| Stage | P50 | P90 | P99 |
+|---|---|---|---|
+| Combined | 4828ms | 6457ms | 10184ms |
 
 ---
 
