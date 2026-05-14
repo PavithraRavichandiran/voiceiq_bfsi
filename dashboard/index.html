@@ -202,8 +202,12 @@
 <!-- Live try panel -->
 <div class="try-panel">
   <h2>Try it live</h2>
-  <textarea id="transcript" placeholder="Paste a Hinglish transcript here…
-e.g. main teen lakh ka personal lon lena chahta hoon barah mahne ke liye"></textarea>
+  <div style="display:flex; gap:0.6rem; align-items:flex-start;">
+    <textarea id="transcript" placeholder="Paste a Hinglish transcript — or click the mic and speak…
+e.g. main teen lakh ka personal lon lena chahta hoon barah mahne ke liye" style="flex:1"></textarea>
+    <button id="micBtn" onclick="toggleMic()" title="Speak in Hinglish" style="width:44px;height:44px;padding:0;font-size:1.2rem;margin-top:0;flex-shrink:0;">🎙️</button>
+  </div>
+  <div id="mic-status" style="font-size:0.75rem;color:#64748b;margin-top:0.4rem;min-height:1rem;"></div>
   <button id="runBtn" onclick="runExtraction()">Extract entities</button>
   <pre id="result"></pre>
 </div>
@@ -321,6 +325,60 @@ e.g. main teen lakh ka personal lon lena chahta hoon barah mahne ke liye"></text
   }
 
   connectSSE();
+
+  // ── Voice input via Web Speech API ──────────────────────────────────────
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  let recognition = null;
+  let isListening = false;
+
+  function toggleMic() {
+    if (!SpeechRecognition) {
+      document.getElementById('mic-status').textContent = 'Voice input not supported — use Chrome or Edge.';
+      return;
+    }
+    isListening ? stopMic() : startMic();
+  }
+
+  function startMic() {
+    recognition = new SpeechRecognition();
+    recognition.lang = 'hi-IN';        // handles Hinglish (Hindi + English)
+    recognition.interimResults = true;
+    recognition.continuous = false;
+
+    recognition.onstart = () => {
+      isListening = true;
+      document.getElementById('micBtn').style.background = '#ef4444';
+      document.getElementById('mic-status').textContent = 'Listening… speak your Hinglish transcript';
+    };
+
+    recognition.onresult = (e) => {
+      const transcript = Array.from(e.results)
+        .map(r => r[0].transcript)
+        .join('');
+      document.getElementById('transcript').value = transcript;
+      if (e.results[e.results.length - 1].isFinal) {
+        document.getElementById('mic-status').textContent = 'Got it — click Extract entities';
+      }
+    };
+
+    recognition.onerror = (e) => {
+      document.getElementById('mic-status').textContent = `Mic error: ${e.error}`;
+      stopMic();
+    };
+
+    recognition.onend = () => stopMic();
+
+    recognition.start();
+  }
+
+  function stopMic() {
+    isListening = false;
+    document.getElementById('micBtn').style.background = '#3b82f6';
+    if (recognition) { recognition.stop(); recognition = null; }
+    if (!document.getElementById('mic-status').textContent.startsWith('Got it')) {
+      document.getElementById('mic-status').textContent = '';
+    }
+  }
 </script>
 </body>
 </html>
