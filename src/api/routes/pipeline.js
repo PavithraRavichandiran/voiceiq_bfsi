@@ -3,6 +3,7 @@ const { v4: uuidv4 } = require('uuid');
 const { correctTranscript } = require('../../pipeline/errorCorrector');
 const { extractEntities } = require('../../pipeline/entityExtractor');
 const { recordLatency } = require('../../utils/latencyTracker');
+const { saveSession } = require('../../pipeline/sessionStore');
 const logger = require('../../utils/logger');
 
 const router = Router();
@@ -35,6 +36,15 @@ router.post('/extract', async (req, res) => {
 
     const latencyEntry = { correction_ms, extraction_ms, total_ms };
     recordLatency(latencyEntry);
+
+    saveSession({
+      session_id:           sessionId,
+      raw_transcript:       transcript.trim(),
+      corrected_transcript: corrected,
+      stt_fallback:         fallback || false,
+      entities,
+      latency:              latencyEntry,
+    });
 
     logger.info('pipeline complete', { session_id: sessionId, total_ms });
 
