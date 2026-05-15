@@ -315,6 +315,7 @@ e.g. main teen lakh ka personal lon lena chahta hoon barah mahne ke liye" style=
       const data = await res.json();
       result.textContent    = JSON.stringify(data, null, 2);
       result.style.display  = 'block';
+      speakSummary(data.entities);
     } catch (err) {
       result.textContent   = 'Error: ' + err.message;
       result.style.display = 'block';
@@ -378,6 +379,43 @@ e.g. main teen lakh ka personal lon lena chahta hoon barah mahne ke liye" style=
     if (!document.getElementById('mic-status').textContent.startsWith('Got it')) {
       document.getElementById('mic-status').textContent = '';
     }
+  }
+
+  // ── TTS summary via Web Speech Synthesis ────────────────────────────────
+  function buildSummary(entities) {
+    if (!entities) return 'No entities extracted.';
+    const parts = [];
+
+    const productMap = {
+      personal_loan: 'personal loan', home_loan: 'home loan', car_loan: 'car loan',
+      credit_card: 'credit card', insurance: 'insurance', fd: 'fixed deposit',
+      rd: 'recurring deposit', mutual_fund: 'mutual fund',
+    };
+    const intentMap = {
+      loan_enquiry: 'loan enquiry', complaint: 'complaint',
+      data_validation: 'data validation', emi_payment: 'EMI payment',
+      collections: 'collections follow-up', general_enquiry: 'general enquiry',
+    };
+
+    if (entities.call_intent)    parts.push(`Call intent: ${intentMap[entities.call_intent.value] || entities.call_intent.value}`);
+    if (entities.product_type)   parts.push(`Product: ${productMap[entities.product_type.value] || entities.product_type.value}`);
+    if (entities.loan_amount)    parts.push(`Loan amount: ${(entities.loan_amount.value / 100000).toFixed(1)} lakh rupees`);
+    if (entities.loan_tenure)    parts.push(`Tenure: ${entities.loan_tenure.value} ${entities.loan_tenure.unit}`);
+    if (entities.emi_amount)     parts.push(`EMI: ${entities.emi_amount.value} rupees`);
+    if (entities.monthly_income) parts.push(`Monthly income: ${entities.monthly_income.value} rupees`);
+    if (entities.interest_rate)  parts.push(`Interest rate: ${entities.interest_rate.value} percent`);
+    if (entities.pan_number)     parts.push(`PAN: ${entities.pan_number.value}`);
+
+    return parts.length ? parts.join('. ') + '.' : 'No financial entities detected.';
+  }
+
+  function speakSummary(entities) {
+    if (!window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(buildSummary(entities));
+    utterance.lang  = 'en-IN';
+    utterance.rate  = 0.95;
+    window.speechSynthesis.speak(utterance);
   }
 </script>
 </body>
