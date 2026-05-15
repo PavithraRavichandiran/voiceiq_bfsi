@@ -210,6 +210,10 @@ e.g. main teen lakh ka personal lon lena chahta hoon barah mahne ke liye" style=
   <div id="mic-status" style="font-size:0.75rem;color:#64748b;margin-top:0.4rem;min-height:1rem;"></div>
   <button id="runBtn" onclick="runExtraction()">Extract entities</button>
   <pre id="result"></pre>
+  <div id="tts-wrap" style="display:none; margin-top:1rem;">
+    <div style="font-size:0.75rem; color:#64748b; margin-bottom:0.4rem;">Voice response</div>
+    <audio id="tts-player" controls style="width:100%; height:36px;"></audio>
+  </div>
 </div>
 
 <script>
@@ -315,7 +319,7 @@ e.g. main teen lakh ka personal lon lena chahta hoon barah mahne ke liye" style=
       const data = await res.json();
       result.textContent    = JSON.stringify(data, null, 2);
       result.style.display  = 'block';
-      speakSummary(data.entities);
+      await generateTTSResponse(data.entities);
     } catch (err) {
       result.textContent   = 'Error: ' + err.message;
       result.style.display = 'block';
@@ -327,95 +331,188 @@ e.g. main teen lakh ka personal lon lena chahta hoon barah mahne ke liye" style=
 
   connectSSE();
 
-  // ── Voice input via Web Speech API ──────────────────────────────────────
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  let recognition = null;
-  let isListening = false;
+  // ── Voice input via Deepgram Nova-2 (WebSocket streaming) ───────────────
+  let mediaRecorder = null;
+  let dgSocket     = null;
+  let isListening  = false;
 
   function toggleMic() {
-    if (!SpeechRecognition) {
-      document.getElementById('mic-status').textContent = 'Voice input not supported — use Chrome or Edge.';
-      return;
-    }
     isListening ? stopMic() : startMic();
   }
 
-  function startMic() {
-    recognition = new SpeechRecognition();
-    recognition.lang = 'hi-IN';        // handles Hinglish (Hindi + English)
-    recognition.interimResults = true;
-    recognition.continuous = false;
+  async function startMic() {
+    const statusEl = document.getElementById('mic-status');
+    const taEl     = document.getElementById('transcript');
 
-    recognition.onstart = () => {
+    let stream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch (err) {
+      statusEl.textContent = `Mic access denied: ${err.message}`;
+      return;
+    }
+
+    dgSocket = new WebSocket(`ws://${location.host}/ws/stt`);
+
+    dgSocket.onopen = () => {
       isListening = true;
       document.getElementById('micBtn').style.background = '#ef4444';
-      document.getElementById('mic-status').textContent = 'Listening… speak your Hinglish transcript';
+      statusEl.textContent = 'Listening via Deepgram Nova-2… speak in Hinglish';
+      taEl.value = '';
+
+      mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+      mediaRecorder.addEventListener('dataavailable', (e) => {
+        if (e.data.size > 0 && dgSocket.readyState === WebSocket.OPEN) {
+          dgSocket.send(e.data);
+        }
+      });
+      mediaRecorder.start(250);
     };
 
-    recognition.onresult = (e) => {
-      const transcript = Array.from(e.results)
-        .map(r => r[0].transcript)
-        .join('');
-      document.getElementById('transcript').value = transcript;
-      if (e.results[e.results.length - 1].isFinal) {
-        document.getElementById('mic-status').textContent = 'Got it — click Extract entities';
+    dgSocket.onmessage = (e) => {
+      const msg = JSON.parse(e.data);
+      if (msg.type === 'error') {
+        statusEl.textContent = `Error: ${msg.message}`;
+        stopMic();
+        return;
+      }
+      if (msg.type === 'transcript' && msg.text) {
+        taEl.value = msg.text;
+        if (msg.isFinal || msg.speech) {
+          statusEl.textContent = 'Got it — click Extract entities';
+        }
       }
     };
 
-    recognition.onerror = (e) => {
-      document.getElementById('mic-status').textContent = `Mic error: ${e.error}`;
+    dgSocket.onerror = () => {
+      statusEl.textContent = 'WebSocket error — is the server running?';
       stopMic();
     };
 
-    recognition.onend = () => stopMic();
-
-    recognition.start();
+    dgSocket.onclose = () => { if (isListening) stopMic(); };
   }
 
   function stopMic() {
     isListening = false;
     document.getElementById('micBtn').style.background = '#3b82f6';
-    if (recognition) { recognition.stop(); recognition = null; }
-    if (!document.getElementById('mic-status').textContent.startsWith('Got it')) {
-      document.getElementById('mic-status').textContent = '';
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+      mediaRecorder.stop();
+      mediaRecorder.stream.getTracks().forEach(t => t.stop());
+      mediaRecorder = null;
+    }
+    if (dgSocket && dgSocket.readyState === WebSocket.OPEN) {
+      dgSocket.close();
+      dgSocket = null;
     }
   }
 
-  // ── TTS summary via Web Speech Synthesis ────────────────────────────────
-  function buildSummary(entities) {
-    if (!entities) return 'No entities extracted.';
-    const parts = [];
-
-    const productMap = {
-      personal_loan: 'personal loan', home_loan: 'home loan', car_loan: 'car loan',
-      credit_card: 'credit card', insurance: 'insurance', fd: 'fixed deposit',
-      rd: 'recurring deposit', mutual_fund: 'mutual fund',
-    };
-    const intentMap = {
-      loan_enquiry: 'loan enquiry', complaint: 'complaint',
-      data_validation: 'data validation', emi_payment: 'EMI payment',
-      collections: 'collections follow-up', general_enquiry: 'general enquiry',
-    };
-
-    if (entities.call_intent)    parts.push(`Call intent: ${intentMap[entities.call_intent.value] || entities.call_intent.value}`);
-    if (entities.product_type)   parts.push(`Product: ${productMap[entities.product_type.value] || entities.product_type.value}`);
-    if (entities.loan_amount)    parts.push(`Loan amount: ${(entities.loan_amount.value / 100000).toFixed(1)} lakh rupees`);
-    if (entities.loan_tenure)    parts.push(`Tenure: ${entities.loan_tenure.value} ${entities.loan_tenure.unit}`);
-    if (entities.emi_amount)     parts.push(`EMI: ${entities.emi_amount.value} rupees`);
-    if (entities.monthly_income) parts.push(`Monthly income: ${entities.monthly_income.value} rupees`);
-    if (entities.interest_rate)  parts.push(`Interest rate: ${entities.interest_rate.value} percent`);
-    if (entities.pan_number)     parts.push(`PAN: ${entities.pan_number.value}`);
-
-    return parts.length ? parts.join('. ') + '.' : 'No financial entities detected.';
+  // ── TTS — natural Hinglish confirmation ─────────────────────────────────
+  function formatAmount(val) {
+    if (!val) return null;
+    const v = val.value;
+    if (v >= 10000000) return `${(v / 10000000).toFixed(1).replace('.0', '')} crore`;
+    if (v >= 100000)   return `${(v / 100000).toFixed(1).replace('.0', '')} lakh`;
+    if (v >= 1000)     return `${(v / 1000).toFixed(1).replace('.0', '')} hazaar`;
+    return `${v}`;
   }
 
-  function speakSummary(entities) {
-    if (!window.speechSynthesis) return;
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(buildSummary(entities));
-    utterance.lang  = 'en-IN';
-    utterance.rate  = 0.95;
-    window.speechSynthesis.speak(utterance);
+  function formatTenure(t) {
+    if (!t) return null;
+    return `${t.value} ${t.unit === 'years' ? 'saal' : 'mahine'}`;
+  }
+
+  const PRODUCT_HI = {
+    personal_loan: 'personal loan',  home_loan: 'home loan',
+    car_loan:      'car loan',        credit_card: 'credit card',
+    insurance:     'insurance',       fd: 'FD',
+    rd:            'RD',              mutual_fund: 'mutual fund',
+  };
+
+  function buildConfirmation(entities) {
+    if (!entities) return 'Kuch samajh nahi aaya, please dobara boliye.';
+
+    const e       = entities;
+    const intent  = e.call_intent?.value;
+    const product = e.product_type?.value;
+    const amount  = formatAmount(e.loan_amount);
+    const tenure  = formatTenure(e.loan_tenure);
+    const emi     = formatAmount(e.emi_amount);
+    const income  = formatAmount(e.monthly_income);
+    const rate    = e.interest_rate ? `${e.interest_rate.value} percent` : null;
+    const pan     = e.pan_number?.value;
+    const prod    = product ? PRODUCT_HI[product] : null;
+
+    // ── Collections ──
+    if (intent === 'collections') {
+      const due = amount ? `${amount} rupaye` : 'kuch amount';
+      return `Aapka ${prod || 'loan'} ka ${due} payment abhi bhi pending hai. Kya aap aaj payment kar sakte hain?`;
+    }
+
+    // ── Complaint ──
+    if (intent === 'complaint') {
+      return `Samajh gaya, aapko ${prod || 'aapki service'} mein ek problem aa rahi hai. Hum abhi investigate karte hain — kya aap thoda aur detail de sakte hain?`;
+    }
+
+    // ── Data validation / KYC ──
+    if (intent === 'data_validation') {
+      return pan
+        ? `Aapka PAN number ${pan.split('').join(' ')} hai — kya yeh sahi hai?`
+        : 'Aapka KYC verification karna hai — kya aap apna PAN number bata sakte hain?';
+    }
+
+    // ── EMI payment / rescheduling ──
+    if (intent === 'emi_payment') {
+      return emi
+        ? `Aapki EMI ${emi} rupaye hai aur aap ise reschedule karna chahte hain — kya yeh sahi hai?`
+        : 'Aap apni EMI ke baare mein baat karna chahte hain — please details batayein.';
+    }
+
+    // ── Loan / product enquiry ──
+    if (amount && prod && tenure) {
+      let msg = `Aapko ${amount} rupaye ka ${prod} chahiye, ${tenure} ke liye`;
+      if (emi)    msg += `, aur EMI ${emi} rupaye se zyada nahi chahiye`;
+      if (income) msg += `. Aapki monthly salary ${income} rupaye hai`;
+      if (rate)   msg += `, aur aap chahte hain ki interest rate ${rate} se kam ho`;
+      return msg + ' — kya yeh sahi hai?';
+    }
+
+    if (amount && prod) {
+      let msg = `Aapko ${amount} rupaye ka ${prod} chahiye`;
+      if (income) msg += `. Aapki salary ${income} rupaye hai`;
+      return msg + ' — kya yeh sahi hai?';
+    }
+
+    if (prod && tenure) {
+      return `Aapko ${prod} chahiye, ${tenure} ke liye — kya yeh sahi hai?`;
+    }
+
+    if (amount) {
+      return `Aapko ${amount} rupaye ka loan chahiye — kya yeh sahi hai?`;
+    }
+
+    return 'Theek hai, main aapki request process kar raha hoon. Ek second please.';
+  }
+
+  async function generateTTSResponse(entities) {
+    const text = buildConfirmation(entities);
+    const wrap = document.getElementById('tts-wrap');
+    const player = document.getElementById('tts-player');
+
+    try {
+      const res = await fetch('/api/tts', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ text }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+
+      const blob = await res.blob();
+      player.src = URL.createObjectURL(blob);
+      wrap.style.display = 'block';
+      player.play();
+    } catch (err) {
+      wrap.style.display = 'none';
+    }
   }
 </script>
 </body>
