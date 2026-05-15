@@ -359,7 +359,7 @@ e.g. main teen lakh ka personal lon lena chahta hoon barah mahne ke liye" style=
     const src  = audioCtx.createMediaStreamSource(micStream);
     scriptProc = audioCtx.createScriptProcessor(2048, 1, 1);  // 128ms chunks
 
-    dgSocket = new WebSocket(`ws://${location.host}/ws/stt`);
+    dgSocket = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws/stt`);
 
     scriptProc.onaudioprocess = (ev) => {
       if (!isListening || !dgSocket || dgSocket.readyState !== WebSocket.OPEN) return;
