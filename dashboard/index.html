@@ -331,10 +331,12 @@ e.g. main teen lakh ka personal lon lena chahta hoon barah mahne ke liye" style=
 
   connectSSE();
 
-  // ── Voice input via Deepgram Nova-2 (WebSocket streaming) ───────────────
-  let mediaRecorder = null;
-  let dgSocket     = null;
-  let isListening  = false;
+  // ── Voice input via Deepgram Nova-2 (raw PCM WebSocket streaming) ────────
+  let audioCtx    = null;
+  let scriptProc  = null;
+  let micStream   = null;
+  let dgSocket    = null;
+  let isListening = false;
 
   function toggleMic() {
     isListening ? stopMic() : startMic();
@@ -344,29 +346,38 @@ e.g. main teen lakh ka personal lon lena chahta hoon barah mahne ke liye" style=
     const statusEl = document.getElementById('mic-status');
     const taEl     = document.getElementById('transcript');
 
-    let stream;
     try {
-      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
     } catch (err) {
       statusEl.textContent = `Mic access denied: ${err.message}`;
       return;
     }
 
+    // Set up audio pipeline immediately so the first chunk is ready by the time
+    // the WebSocket handshake completes — avoids losing the first 1-2 words.
+    audioCtx   = new AudioContext({ sampleRate: 16000 });
+    const src  = audioCtx.createMediaStreamSource(micStream);
+    scriptProc = audioCtx.createScriptProcessor(2048, 1, 1);  // 128ms chunks
+
     dgSocket = new WebSocket(`ws://${location.host}/ws/stt`);
+
+    scriptProc.onaudioprocess = (ev) => {
+      if (!isListening || !dgSocket || dgSocket.readyState !== WebSocket.OPEN) return;
+      const f32 = ev.inputBuffer.getChannelData(0);
+      const i16 = new Int16Array(f32.length);
+      for (let i = 0; i < f32.length; i++)
+        i16[i] = Math.max(-32768, Math.min(32767, f32[i] * 32768));
+      dgSocket.send(i16.buffer);
+    };
+
+    src.connect(scriptProc);
+    scriptProc.connect(audioCtx.destination);
 
     dgSocket.onopen = () => {
       isListening = true;
       document.getElementById('micBtn').style.background = '#ef4444';
       statusEl.textContent = 'Listening via Deepgram Nova-2… speak in Hinglish';
       taEl.value = '';
-
-      mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
-      mediaRecorder.addEventListener('dataavailable', (e) => {
-        if (e.data.size > 0 && dgSocket.readyState === WebSocket.OPEN) {
-          dgSocket.send(e.data);
-        }
-      });
-      mediaRecorder.start(250);
     };
 
     dgSocket.onmessage = (e) => {
@@ -395,11 +406,10 @@ e.g. main teen lakh ka personal lon lena chahta hoon barah mahne ke liye" style=
   function stopMic() {
     isListening = false;
     document.getElementById('micBtn').style.background = '#3b82f6';
-    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-      mediaRecorder.stop();
-      mediaRecorder.stream.getTracks().forEach(t => t.stop());
-      mediaRecorder = null;
-    }
+    document.getElementById('mic-status').textContent  = '';
+    if (scriptProc) { scriptProc.disconnect(); scriptProc = null; }
+    if (audioCtx)   { audioCtx.close();        audioCtx   = null; }
+    if (micStream)  { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
     if (dgSocket && dgSocket.readyState === WebSocket.OPEN) {
       dgSocket.close();
       dgSocket = null;
@@ -410,15 +420,15 @@ e.g. main teen lakh ka personal lon lena chahta hoon barah mahne ke liye" style=
   function formatAmount(val) {
     if (!val) return null;
     const v = val.value;
-    if (v >= 10000000) return `${(v / 10000000).toFixed(1).replace('.0', '')} crore`;
-    if (v >= 100000)   return `${(v / 100000).toFixed(1).replace('.0', '')} lakh`;
-    if (v >= 1000)     return `${(v / 1000).toFixed(1).replace('.0', '')} hazaar`;
+    if (v >= 10000000) return `${(v / 10000000).toFixed(1).replace('.0', '')} करोड़`;
+    if (v >= 100000)   return `${(v / 100000).toFixed(1).replace('.0', '')} लाख`;
+    if (v >= 1000)     return `${(v / 1000).toFixed(1).replace('.0', '')} हज़ार`;
     return `${v}`;
   }
 
   function formatTenure(t) {
     if (!t) return null;
-    return `${t.value} ${t.unit === 'years' ? 'saal' : 'mahine'}`;
+    return `${t.value} ${t.unit === 'years' ? 'साल' : 'महीने'}`;
   }
 
   const PRODUCT_HI = {
@@ -444,7 +454,7 @@ e.g. main teen lakh ka personal lon lena chahta hoon barah mahne ke liye" style=
 
     // ── Collections ──
     if (intent === 'collections') {
-      const due = amount ? `${amount} rupaye` : 'kuch amount';
+      const due = amount ? `${amount} रुपये` : 'kuch amount';
       return `Aapka ${prod || 'loan'} ka ${due} payment abhi bhi pending hai. Kya aap aaj payment kar sakte hain?`;
     }
 
@@ -463,23 +473,27 @@ e.g. main teen lakh ka personal lon lena chahta hoon barah mahne ke liye" style=
     // ── EMI payment / rescheduling ──
     if (intent === 'emi_payment') {
       return emi
-        ? `Aapki EMI ${emi} rupaye hai aur aap ise reschedule karna chahte hain — kya yeh sahi hai?`
+        ? `Aapki EMI ${emi} रुपये hai aur aap ise reschedule karna chahte hain — kya yeh sahi hai?`
         : 'Aap apni EMI ke baare mein baat karna chahte hain — please details batayein.';
     }
 
     // ── Loan / product enquiry ──
     if (amount && prod && tenure) {
-      let msg = `Aapko ${amount} rupaye ka ${prod} chahiye, ${tenure} ke liye`;
-      if (emi)    msg += `, aur EMI ${emi} rupaye se zyada nahi chahiye`;
-      if (income) msg += `. Aapki monthly salary ${income} rupaye hai`;
+      let msg = `Aapko ${amount} रुपये ka ${prod} chahiye, ${tenure} ke liye`;
+      if (emi)    msg += `, aur EMI ${emi} रुपये se zyada nahi chahiye`;
+      if (income) msg += `. Aapki monthly salary ${income} रुपये hai`;
       if (rate)   msg += `, aur aap chahte hain ki interest rate ${rate} se kam ho`;
       return msg + ' — kya yeh sahi hai?';
     }
 
     if (amount && prod) {
-      let msg = `Aapko ${amount} rupaye ka ${prod} chahiye`;
-      if (income) msg += `. Aapki salary ${income} rupaye hai`;
+      let msg = `Aapko ${amount} रुपये ka ${prod} chahiye`;
+      if (income) msg += `. Aapki salary ${income} रुपये hai`;
       return msg + ' — kya yeh sahi hai?';
+    }
+
+    if (amount && tenure) {
+      return `Aapko ${amount} रुपये ka loan chahiye, ${tenure} ke liye — kya yeh sahi hai?`;
     }
 
     if (prod && tenure) {
@@ -487,7 +501,7 @@ e.g. main teen lakh ka personal lon lena chahta hoon barah mahne ke liye" style=
     }
 
     if (amount) {
-      return `Aapko ${amount} rupaye ka loan chahiye — kya yeh sahi hai?`;
+      return `Aapko ${amount} रुपये ka loan chahiye — kya yeh sahi hai?`;
     }
 
     return 'Theek hai, main aapki request process kar raha hoon. Ek second please.';

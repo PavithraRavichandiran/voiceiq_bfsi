@@ -8,8 +8,12 @@ const DEEPGRAM_URL =
   '&language=hi' +
   '&smart_format=true' +
   '&interim_results=true' +
-  '&utterance_end_ms=1000' +
-  '&vad_events=true';
+  '&endpointing=500' +
+  '&utterance_end_ms=2000' +
+  '&vad_events=true' +
+  '&encoding=linear16' +
+  '&sample_rate=16000' +
+  '&channels=1';
 
 function createDeepgramStream(onTranscript, onError) {
   const ws = new WebSocket(DEEPGRAM_URL, {

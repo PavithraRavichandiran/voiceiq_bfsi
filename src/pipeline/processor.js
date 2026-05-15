@@ -40,8 +40,17 @@ loan_tenure: Duration explicitly stated by the caller (e.g. "24 mahine ke liye",
 emi_amount: Monthly instalment amount in INR. null if not mentioned.
 
 product_type: One of personal_loan | home_loan | car_loan | credit_card | insurance | fd | rd | mutual_fund
-  - Infer from context: "ghar ke liye loan"→home_loan, "car ke liye"→car_loan, "SIP"→mutual_fund
-  - null only if truly ambiguous
+  - Extract ONLY when the transcript contains an explicit product clue:
+    "ghar/makaan/property ke liye" → home_loan
+    "car/gaadi/vehicle ke liye"    → car_loan
+    "personal loan/parsonal lon"   → personal_loan
+    "credit card/kradit kaard"     → credit_card
+    "bima/insurance"               → insurance
+    "SIP/mutual fund"              → mutual_fund
+    "FD/fixed deposit"             → fd
+    "RD/recurring"                 → rd
+  - "loan" or "lon" alone with NO product context → null (do NOT default to personal_loan)
+  - null if no explicit product clue is present
 
 pan_number: Format = 5 uppercase letters + 4 digits + 1 uppercase letter (e.g. ABCDE1234F). null if absent.
 

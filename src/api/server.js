@@ -51,7 +51,8 @@ wss.on('connection', (ws) => {
     }
   );
 
-  ws.on('message', (audioChunk) => {
+  ws.on('message', (audioChunk, isBinary) => {
+    logger.debug('audio chunk received', { bytes: audioChunk.length, isBinary });
     try { dgConnection.send(audioChunk); } catch (_) {}
   });
 
